@@ -12,6 +12,13 @@ export function calculateTotal(expenses: Expense[]): number {
 }
 
 /**
+ * Display a stored business date-time without applying timezone conversion.
+ */
+export function formatOccurredAt(value: string): string {
+  return value.slice(0, 16).replace("T", " ");
+}
+
+/**
  * Format currency amount
  */
 export function formatCurrency(amount: number): string {
@@ -19,13 +26,16 @@ export function formatCurrency(amount: number): string {
 }
 
 /**
- * Format date to YYYY-MM-DD
+ * Format the current local clock value for date and time form defaults.
  */
-export function formatDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+export function toDateTimeInput(value: Date = new Date()): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  const hour = String(value.getHours()).padStart(2, "0");
+  const minute = String(value.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day}T${hour}:${minute}`;
 }
 
 /**
@@ -42,7 +52,7 @@ export function groupExpensesByDay(expenses: Expense[]) {
   const grouped = new Map<number, Expense[]>();
 
   expenses.forEach((expense) => {
-    const day = new Date(expense.date).getDate();
+    const day = Number(expense.occurredAt.slice(8, 10));
     const dayExpenses = grouped.get(day) || [];
     dayExpenses.push(expense);
     grouped.set(day, dayExpenses);
