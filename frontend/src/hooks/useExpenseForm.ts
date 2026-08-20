@@ -4,7 +4,7 @@
 
 import { useState } from "react";
 import { ExpenseFormData } from "../types";
-import { formatDate } from "../utils/expenseUtils";
+import { toDateTimeInput } from "../utils/expenseUtils";
 
 interface UseExpenseFormProps {
   initialData?: Partial<ExpenseFormData>;
@@ -12,13 +12,19 @@ interface UseExpenseFormProps {
 }
 
 export function useExpenseForm({ initialData, onSubmit }: UseExpenseFormProps) {
-  const [formData, setFormData] = useState<ExpenseFormData>({
-    amount: initialData?.amount || "",
-    description: initialData?.description || "",
-    category: initialData?.category || "",
-    date: initialData?.date || formatDate(new Date()),
-  });
+  const defaultFormData = (): ExpenseFormData => {
+    const [currentDate, currentTime] = toDateTimeInput().split("T");
 
+    return {
+      amount: initialData?.amount || "",
+      description: initialData?.description || "",
+      category: initialData?.category || "",
+      date: initialData?.date || currentDate,
+      time: initialData?.time || currentTime,
+    };
+  };
+
+  const [formData, setFormData] = useState<ExpenseFormData>(defaultFormData());
   const [errors, setErrors] = useState<Partial<ExpenseFormData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -49,6 +55,11 @@ export function useExpenseForm({ initialData, onSubmit }: UseExpenseFormProps) {
       newErrors.date = "Date is required";
     }
 
+    if (!formData.time) {
+      newErrors.time = "Time is required";
+    }
+
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -64,12 +75,7 @@ export function useExpenseForm({ initialData, onSubmit }: UseExpenseFormProps) {
     try {
       await onSubmit(formData);
       // Reset form on success
-      setFormData({
-        amount: "",
-        description: "",
-        category: "",
-        date: formatDate(new Date()),
-      });
+      setFormData(defaultFormData());
       setErrors({});
     } catch (error) {
       console.error("Form submission error:", error);
@@ -79,12 +85,7 @@ export function useExpenseForm({ initialData, onSubmit }: UseExpenseFormProps) {
   };
 
   const resetForm = () => {
-    setFormData({
-      amount: initialData?.amount || "",
-      description: initialData?.description || "",
-      category: initialData?.category || "",
-      date: initialData?.date || formatDate(new Date()),
-    });
+    setFormData(defaultFormData());
     setErrors({});
   };
 

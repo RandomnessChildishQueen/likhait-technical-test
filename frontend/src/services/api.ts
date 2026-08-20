@@ -6,6 +6,28 @@ import { Expense, ExpenseFormData } from "../types";
 
 const API_BASE_URL = "http://localhost:3000/api";
 
+interface ExpenseResponse {
+  id: number;
+  amount: number;
+  description: string;
+  category: string;
+  occurred_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+function toExpense(data: ExpenseResponse): Expense {
+  return {
+    id: data.id,
+    amount: Number(data.amount),
+    description: data.description,
+    category: data.category,
+    occurredAt: data.occurred_at,
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+  };
+}
+
 /**
  * Fetch all expenses
  */
@@ -14,7 +36,8 @@ export async function fetchExpenses(): Promise<Expense[]> {
   if (!response.ok) {
     throw new Error("Failed to fetch expenses");
   }
-  return response.json();
+  const data: ExpenseResponse[] = await response.json();
+  return data.map(toExpense);
 }
 
 /**
@@ -30,7 +53,8 @@ export async function getExpenses(
   if (!response.ok) {
     throw new Error("Failed to fetch expenses");
   }
-  return response.json();
+  const data: ExpenseResponse[] = await response.json();
+  return data.map(toExpense);
 }
 
 /**
@@ -46,34 +70,36 @@ export async function fetchCategories(): Promise<
   return response.json();
 }
 
+async function buildExpensePayload(data: ExpenseFormData) {
+  const categories = await fetchCategories();
+  const category = categories.find((item) => item.name === data.category);
+
+  if (!category) {
+    throw new Error(`Category "${data.category}" was not found`);
+  }
+
+  return {
+    description: data.description,
+    amount: data.amount,
+    category_id: category.id,
+    // Keep the entered clock value unchanged.
+    occurred_at: `${data.date}T${data.time}`,
+  };
+}
+
 /**
  * Create a new expense
  */
 export async function createExpense(data: ExpenseFormData): Promise<Expense> {
-  // Convert category name to category_id
-  const categories = await fetchCategories();
-  const category = categories.find((c) => c.name === data.category);
-
-  const expenseData = {
-    description: data.description,
-    amount: data.amount,
-    category_id: category?.id,
-    date: data.date,
-  };
-
   const response = await fetch(`${API_BASE_URL}/expenses`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ expense: expenseData }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ expense: await buildExpensePayload(data) }),
   });
 
-  if (!response.ok) {
-    throw new Error("Failed to create expense");
-  }
+  if (!response.ok) throw new Error("Failed to create expense");
 
-  return response.json();
+  return toExpense(await response.json());
 }
 
 /**
@@ -81,21 +107,19 @@ export async function createExpense(data: ExpenseFormData): Promise<Expense> {
  */
 export async function updateExpense(
   id: number,
-  data: Partial<ExpenseFormData>,
+  data: ExpenseFormData,
 ): Promise<Expense> {
   const response = await fetch(`${API_BASE_URL}/expenses/${id}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ expense: data }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ expense: await buildExpensePayload(data) }),
   });
 
   if (!response.ok) {
     throw new Error("Failed to update expense");
   }
 
-  return response.json();
+  return toExpense(await response.json());
 }
 
 /**

@@ -4,7 +4,7 @@
 
 import React, { useState } from "react";
 import { Expense, ExpenseFormData } from "../types";
-import { formatCurrency, formatDate } from "../utils/expenseUtils";
+import { formatCurrency, formatOccurredAt } from "../utils/expenseUtils";
 import { getCategoryEmoji } from "../constants/categoryEmojis";
 import { COLORS } from "../constants/colors";
 import { Button, Modal, Pagination } from "../vibes";
@@ -122,7 +122,7 @@ export function CalendarExpenseTable({
       <table style={tableStyle}>
         <thead style={theadStyle}>
           <tr>
-            <th style={thStyle}>Date</th>
+            <th style={thStyle}>Date and Time</th>
             <th style={thStyle}>Description</th>
             <th style={thStyle}>Category</th>
             <th style={thStyle}>Amount</th>
@@ -132,7 +132,7 @@ export function CalendarExpenseTable({
         <tbody>
           {currentExpenses.map((expense) => (
             <tr key={expense.id}>
-              <td style={tdStyle}>{formatDate(new Date(expense.date))}</td>
+              <td style={tdStyle}>{formatOccurredAt(expense.occurredAt)}</td>
               <td style={tdStyle}>{expense.description}</td>
               <td style={tdStyle}>
                 <span
@@ -192,7 +192,8 @@ export function CalendarExpenseTable({
               amount: editingExpense.amount.toString(),
               description: editingExpense.description,
               category: editingExpense.category,
-              date: formatDate(new Date(editingExpense.date)),
+              date: editingExpense.occurredAt.slice(0, 10),
+              time: editingExpense.occurredAt.slice(11, 16),
             }}
             onSubmit={handleUpdate}
             onCancel={() => {

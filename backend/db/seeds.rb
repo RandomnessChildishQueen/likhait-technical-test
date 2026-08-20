@@ -145,7 +145,13 @@ while current_date <= end_date
         description: template[:description],
         amount: amount,
         category: category,
-        date: current_date,
+        occurred_at: Time.utc(
+          current_date.year,
+          current_date.month,
+          current_date.day,
+          rand(8..20),
+          rand(0..59)
+        ),
         created_at: current_date,
         updated_at: current_date
       )

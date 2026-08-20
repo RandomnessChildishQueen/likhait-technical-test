@@ -89,6 +89,16 @@ export function ExpenseForm({
         required
       />
 
+      <TextField
+        label="Time"
+        type="time"
+        value={formData.time}
+        onChange={(e) => handleChange("time", e.target.value)}
+        error={errors.time}
+        fullWidth
+        required
+      />
+
       <div style={buttonGroupStyle}>
         <Button
           type="submit"

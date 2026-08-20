@@ -1,18 +1,22 @@
 class Api::ExpensesController < ApplicationController
   def index
-    expenses = Expense.includes(:category).order(date: :desc, created_at: :desc)
+    expenses = Expense
+      .includes(:category)
+      .order(occurred_at: :desc, created_at: :desc)
 
     if params[:year].present? && params[:month].present?
       year = params[:year].to_i
       month = params[:month].to_i
 
-      start_date = Date.new(year, month, 1)
-      end_date = start_date.end_of_month
+      start_at = Time.utc(year, month, 1)
+      end_at = start_at.next_month
 
-      expenses = expenses.where(created_at: start_date.beginning_of_day..end_date.end_of_day)
+      expenses = expenses.where(occurred_at: start_at...end_at)
     end
 
     render json: expenses.map { |expense| format_expense(expense) }
+  rescue ArgumentError
+    render json: { errors: [ "Invalid year or month" ] }, status: :unprocessable_entity
   end
 
   def create
@@ -44,7 +48,12 @@ class Api::ExpensesController < ApplicationController
   private
 
   def expense_params
-    params.require(:expense).permit(:description, :amount, :category_id, :date)
+    params.require(:expense).permit(
+      :description,
+      :amount,
+      :category_id,
+      :occurred_at
+    )
   end
 
   def format_expense(expense)
@@ -53,7 +62,7 @@ class Api::ExpensesController < ApplicationController
       description: expense.description,
       amount: expense.amount.to_f,
       category: expense.category.name,
-      date: expense.date.to_s,
+      occurred_at: expense.occurred_at.strftime("%Y-%m-%dT%H:%M:%S"),
       created_at: expense.created_at,
       updated_at: expense.updated_at
     }
