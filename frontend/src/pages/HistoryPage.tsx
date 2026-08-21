@@ -101,8 +101,12 @@ const HistoryPage: React.FC = () => {
     try {
       await createExpense(data);
       setIsModalOpen(false);
-      navigateToDate(data.date);
-      fetchExpenses();
+      const [year, month] = data.date.split("-").map(Number);
+      if (year === selectedYear && month === selectedMonth) {
+        fetchExpenses();
+      } else {
+        navigateToDate(data.date);
+      }
     } catch (error) {
       console.error("Error creating expense:", error);
       throw error;
@@ -218,8 +222,11 @@ const HistoryPage: React.FC = () => {
               <CalendarExpenseTable
                 expenses={visibleExpenses}
                 onExpenseUpdated={(targetDate) => {
-                  if (targetDate) navigateToDate(targetDate);
-                  fetchExpenses();
+                  if (targetDate) {
+                    navigateToDate(targetDate);
+                  } else {
+                    fetchExpenses();
+                  }
                 }}
               />
             </div>
