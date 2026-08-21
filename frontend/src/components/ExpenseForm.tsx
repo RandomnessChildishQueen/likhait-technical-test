@@ -8,6 +8,7 @@ import { useCategories } from "../hooks/useCategories";
 import { TextField, SelectBox, Button } from "../vibes";
 import { useExpenseForm } from "../hooks/useExpenseForm";
 import { AddCategoryModal } from "./AddCategoryModal";
+import { getTodayDateString } from "../utils/expenseUtils";
 
 interface ExpenseFormProps {
   initialData?: Partial<ExpenseFormData>;
@@ -104,6 +105,7 @@ export function ExpenseForm({
         value={formData.date}
         onChange={(e) => handleChange("date", e.target.value)}
         error={errors.date}
+        max={getTodayDateString()}
         fullWidth
         required
       />

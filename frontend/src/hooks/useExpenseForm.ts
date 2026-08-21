@@ -4,7 +4,7 @@
 
 import { useState } from "react";
 import { ExpenseFormData } from "../types";
-import { toDateTimeInput } from "../utils/expenseUtils";
+import { toDateTimeInput, getTodayDateString } from "../utils/expenseUtils";
 
 interface UseExpenseFormProps {
   initialData?: Partial<ExpenseFormData>;
@@ -53,6 +53,8 @@ export function useExpenseForm({ initialData, onSubmit }: UseExpenseFormProps) {
 
     if (!formData.date) {
       newErrors.date = "Date is required";
+    } else if (formData.date > getTodayDateString()) {
+      newErrors.date = "Expense date cannot be in the future — enter today's date or earlier";
     }
 
     if (!formData.time) {
