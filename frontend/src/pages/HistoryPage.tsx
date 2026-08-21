@@ -41,6 +41,13 @@ const HistoryPage: React.FC = () => {
     initial.categoryId,
   );
 
+  const navigateToDate = (isoDate: string) => {
+    const [year, month] = isoDate.split("-").map(Number);
+    setSelectedYear(year);
+    setSelectedMonth(month);
+    updateURL(year, month, selectedCategoryId);
+  };
+
   // Update URL when year, month, or category changes
   const updateURL = (year: number, month: number, categoryId?: number) => {
     const params = new URLSearchParams();
@@ -94,6 +101,7 @@ const HistoryPage: React.FC = () => {
     try {
       await createExpense(data);
       setIsModalOpen(false);
+      navigateToDate(data.date);
       fetchExpenses();
     } catch (error) {
       console.error("Error creating expense:", error);
@@ -209,7 +217,10 @@ const HistoryPage: React.FC = () => {
             <div style={{ marginTop: "32px" }}>
               <CalendarExpenseTable
                 expenses={visibleExpenses}
-                onExpenseUpdated={fetchExpenses}
+                onExpenseUpdated={(targetDate) => {
+                  if (targetDate) navigateToDate(targetDate);
+                  fetchExpenses();
+                }}
               />
             </div>
           </>
