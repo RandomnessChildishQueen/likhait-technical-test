@@ -1,7 +1,7 @@
 class Category < ApplicationRecord
   has_many :expenses, dependent: :destroy
 
-  normalize :name, with: ->(name) { name.strip }
+  normalizes :name, with: ->(name) { name.strip }
 
   validates :name,
   presence: true,
