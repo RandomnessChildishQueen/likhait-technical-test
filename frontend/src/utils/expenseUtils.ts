@@ -74,3 +74,8 @@ export function groupExpensesByDay(expenses: Expense[]) {
 
   return grouped;
 }
+
+export function yearMonthOf(occurredAt: string): [number, number] {
+  const [year, month] = occurredAt.split("-");
+  return [Number(year), Number(month)];
+}

@@ -13,7 +13,7 @@ import { deleteExpense, updateExpense } from "../services/api";
 
 interface CalendarExpenseTableProps {
   expenses: Expense[];
-  onExpenseUpdated: () => void;
+  onExpenseUpdated: (targetDate: string) => void;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -47,10 +47,10 @@ export function CalendarExpenseTable({
   const confirmDelete = async () => {
     if (!deletingExpense) return;
     try {
-      await deleteExpense(deletingExpense.id);
+      await deleteExpense(deletingExpense.id, deletingExpense.occurredAt);
       setIsDeleteModalOpen(false);
       setDeletingExpense(null);
-      onExpenseUpdated();
+      onExpenseUpdated(deletingExpense.occurredAt);
     } catch (error) {
       console.error("Failed to delete expense:", error);
       alert("Failed to delete expense");
@@ -60,10 +60,10 @@ export function CalendarExpenseTable({
   const handleUpdate = async (data: ExpenseFormData) => {
     if (!editingExpense) return;
     try {
-      await updateExpense(editingExpense.id, data);
+      await updateExpense(editingExpense.id, data, editingExpense.occurredAt);
       setIsEditModalOpen(false);
       setEditingExpense(null);
-      onExpenseUpdated();
+      onExpenseUpdated(data.date);
     } catch (error) {
       console.error("Failed to update expense:", error);
       throw error;

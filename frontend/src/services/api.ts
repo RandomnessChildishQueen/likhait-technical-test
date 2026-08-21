@@ -3,6 +3,7 @@
  */
 
 import { Category, Expense, ExpenseFormData } from "../types";
+import { yearMonthOf } from "../utils/expenseUtils";
 
 const API_BASE_URL = "http://localhost:3000/api";
 
@@ -47,14 +48,109 @@ export async function getExpenses(
   year: number,
   month: number,
 ): Promise<Expense[]> {
-  const response = await fetch(
-    `${API_BASE_URL}/expenses?year=${year}&month=${month}`,
-  );
-  if (!response.ok) {
-    throw new Error("Failed to fetch expenses");
+  const key = expenseCacheKey(year, month);
+  const cached = expensesCache.get(key);
+  if (cached) return cached;
+
+  const promise = (async () => {
+    const response = await fetch(
+      `${API_BASE_URL}/expenses?year=${year}&month=${month}`,
+    );
+    if (!response.ok) {
+      expensesCache.delete(key);
+      throw new Error("Failed to fetch expenses");
+    }
+    const data: ExpenseResponse[] = await response.json();
+    return data.map(toExpense);
+  })();
+  expensesCache.set(key, promise);
+  return promise;
+}
+
+type ExpenseCacheEntry = Promise<Expense[]>;
+const expensesCache = new Map<string, ExpenseCacheEntry>();
+
+function expenseCacheKey(year: number, month: number): string {
+  return `${year}-${month}`;
+}
+
+export function invalidateExpensesCache(year?: number, month?: number): void {
+  if (year === undefined || month === undefined) {
+      expensesCache.clear();
+      return;
+    }
+    expensesCache.delete(expenseCacheKey(year, month));
+}
+
+async function buildExpensePayload(data: ExpenseFormData) {
+  const categories = await fetchCategories();
+  const category = categories.find((item) => item.name === data.category);
+
+  if (!category) {
+    throw new Error(`Category "${data.category}" was not found`);
   }
-  const data: ExpenseResponse[] = await response.json();
-  return data.map(toExpense);
+
+  return {
+    description: data.description,
+    amount: data.amount,
+    category_id: category.id,
+    // Keep the entered clock value unchanged.
+    occurred_at: `${data.date}T${data.time}`,
+  };
+}
+
+/**
+ * Create a new expense
+ */
+export async function createExpense(data: ExpenseFormData): Promise<Expense> {
+  const response = await fetch(`${API_BASE_URL}/expenses`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ expense: await buildExpensePayload(data) }),
+  });
+
+  if (!response.ok) throw new Error("Failed to create expense");
+
+  invalidateExpensesCache(...yearMonthOf(data.date));
+  return toExpense(await response.json());
+}
+
+/**
+ * Update an existing expense
+ */
+export async function updateExpense(
+  id: number,
+  data: ExpenseFormData,
+  previousOccurredAt: string,
+): Promise<Expense> {
+  const response = await fetch(`${API_BASE_URL}/expenses/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ expense: await buildExpensePayload(data) }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to update expense");
+  }
+
+  invalidateExpensesCache(...yearMonthOf(previousOccurredAt));
+  invalidateExpensesCache(...yearMonthOf(data.date));
+  return toExpense(await response.json());
+}
+
+/**
+ * Delete an expense
+ */
+export async function deleteExpense(id: number, occurredAt: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/expenses/${id}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to delete expense");
+  }
+
+  invalidateExpensesCache(...yearMonthOf(occurredAt));
 }
 
 type CategoriesListener = () => void;
@@ -162,69 +258,4 @@ export async function deleteCategory(id: number): Promise<void> {
     throw new Error(body?.errors?.[0] ?? "Failed to delete category");
   }
   invalidateCategoriesCache();
-}
-
-async function buildExpensePayload(data: ExpenseFormData) {
-  const categories = await fetchCategories();
-  const category = categories.find((item) => item.name === data.category);
-
-  if (!category) {
-    throw new Error(`Category "${data.category}" was not found`);
-  }
-
-  return {
-    description: data.description,
-    amount: data.amount,
-    category_id: category.id,
-    // Keep the entered clock value unchanged.
-    occurred_at: `${data.date}T${data.time}`,
-  };
-}
-
-/**
- * Create a new expense
- */
-export async function createExpense(data: ExpenseFormData): Promise<Expense> {
-  const response = await fetch(`${API_BASE_URL}/expenses`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ expense: await buildExpensePayload(data) }),
-  });
-
-  if (!response.ok) throw new Error("Failed to create expense");
-
-  return toExpense(await response.json());
-}
-
-/**
- * Update an existing expense
- */
-export async function updateExpense(
-  id: number,
-  data: ExpenseFormData,
-): Promise<Expense> {
-  const response = await fetch(`${API_BASE_URL}/expenses/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ expense: await buildExpensePayload(data) }),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to update expense");
-  }
-
-  return toExpense(await response.json());
-}
-
-/**
- * Delete an expense
- */
-export async function deleteExpense(id: number): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/expenses/${id}`, {
-    method: "DELETE",
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to delete expense");
-  }
 }
