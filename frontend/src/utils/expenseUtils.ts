@@ -33,6 +33,13 @@ export function getTodayDateString(): string {
 }
 
 /**
+ * Get the current local time as an HH:MM string, for time-input bounds.
+ */
+export function getCurrentTimeString(): string {
+  return toDateTimeInput().split("T")[1];
+}
+
+/**
  * Format the current local clock value for date and time form defaults.
  */
 export function toDateTimeInput(value: Date = new Date()): string {
