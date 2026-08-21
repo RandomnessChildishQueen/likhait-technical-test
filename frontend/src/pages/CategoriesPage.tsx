@@ -7,6 +7,7 @@ import { useCategories } from "../hooks/useCategories";
 import { useCategoryEmoji } from "../hooks/useCategoryEmoji";
 import { AddCategoryModal } from "../components/AddCategoryModal";
 import { CategoryDetailModal } from "../components/CategoryDetailModal";
+import { deleteCategory } from "../services/api";
 import { ItemTable, Button } from "../vibes";
 import { Category } from "../types";
 import { COLORS } from "../constants/colors";
@@ -21,6 +22,7 @@ const CategoriesPage: React.FC<CategoriesPageProps> = ({ onViewTransactions }) =
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | undefined>();
   const [viewingCategory, setViewingCategory] = useState<Category | undefined>();
+  const [deletingId, setDeletingId] = useState<number | undefined>(undefined);
 
   const pageStyle: React.CSSProperties = {
     padding: "48px 64px",
@@ -42,6 +44,28 @@ const CategoriesPage: React.FC<CategoriesPageProps> = ({ onViewTransactions }) =
     margin: 0,
   };
 
+  const actionsCellStyle: React.CSSProperties = {
+    display: "flex",
+    gap: "0.5rem",
+    justifyContent: "flex-end",
+  };
+
+  const handleDelete = async (category: Category) => {
+    const confirmed = window.confirm(
+      `Delete "${category.name}"? This will also delete every expense recorded under this category. This cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    setDeletingId(category.id);
+    try {
+      await deleteCategory(category.id);
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Failed to delete category");
+    } finally {
+      setDeletingId(undefined);
+    }
+  };
+
   const columns = [
     {
       key: "emoji",
@@ -60,16 +84,29 @@ const CategoriesPage: React.FC<CategoriesPageProps> = ({ onViewTransactions }) =
       header: "",
       align: "right" as const,
       render: (item: Category) => (
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={(e: React.MouseEvent) => {
-            e.stopPropagation();
-            setEditingCategory(item);
-          }}
-        >
-          Edit
-        </Button>
+        <div style={actionsCellStyle}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
+              setEditingCategory(item);
+            }}
+          >
+            Edit
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            disabled={deletingId === item.id}
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
+              handleDelete(item);
+            }}
+          >
+            {deletingId === item.id ? "Deleting..." : "Delete"}
+          </Button>
+        </div>
       ),
     },
   ];
@@ -111,6 +148,10 @@ const CategoriesPage: React.FC<CategoriesPageProps> = ({ onViewTransactions }) =
         onClose={() => setViewingCategory(undefined)}
         onEdit={() => {
           setEditingCategory(viewingCategory);
+          setViewingCategory(undefined);
+        }}
+        onDelete={() => {
+          if (viewingCategory) handleDelete(viewingCategory);
           setViewingCategory(undefined);
         }}
         onViewTransactions={() => {

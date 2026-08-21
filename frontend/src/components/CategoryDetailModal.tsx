@@ -14,7 +14,9 @@ interface CategoryDetailModalProps {
   category?: Category;
   onClose: () => void;
   onEdit: () => void;
+  onDelete: () => void;
   onViewTransactions: () => void;
+  isDeleting?: boolean;
 }
 
 export function CategoryDetailModal({
@@ -22,7 +24,9 @@ export function CategoryDetailModal({
   category,
   onClose,
   onEdit,
+  onDelete,
   onViewTransactions,
+  isDeleting,
 }: CategoryDetailModalProps) {
   const categoryEmoji = useCategoryEmoji();
 
@@ -76,6 +80,9 @@ export function CategoryDetailModal({
           </Button>
           <Button type="button" variant="secondary" onClick={onViewTransactions}>
             View Transactions
+          </Button>
+          <Button type="button" variant="danger" disabled={isDeleting} onClick={onDelete}>
+            {isDeleting ? "Deleting..." : "Delete"}
           </Button>
         </div>
       </div>
