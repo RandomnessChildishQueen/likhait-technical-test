@@ -47,14 +47,34 @@ export async function getExpenses(
   year: number,
   month: number,
 ): Promise<Expense[]> {
-  const response = await fetch(
-    `${API_BASE_URL}/expenses?year=${year}&month=${month}`,
-  );
-  if (!response.ok) {
-    throw new Error("Failed to fetch expenses");
-  }
-  const data: ExpenseResponse[] = await response.json();
-  return data.map(toExpense);
+  const key = expenseCacheKey(year, month);
+  const cached = expensesCache.get(key);
+  if (cached) return cached;
+
+  const promise = (async () => {
+    const response = await fetch(
+      `${API_BASE_URL}/expenses?year=${year}&month=${month}`,
+    );
+    if (!response.ok) {
+      expensesCache.delete(key);
+      throw new Error("Failed to fetch expenses");
+    }
+    const data: ExpenseResponse[] = await response.json();
+    return data.map(toExpense);
+  })();
+  expensesCache.set(key, promise);
+  return promise;
+}
+
+type ExpenseCacheEntry = Promise<Expense[]>;
+const expensesCache = new Map<string, ExpenseCacheEntry>();
+
+function expenseCacheKey(year: number, month: number): string {
+  return `${year}-${month}`;
+}
+
+export function invalidateExpensesCache(): void {
+  expensesCache.clear();
 }
 
 type CategoriesListener = () => void;
@@ -193,6 +213,7 @@ export async function createExpense(data: ExpenseFormData): Promise<Expense> {
 
   if (!response.ok) throw new Error("Failed to create expense");
 
+  invalidateExpensesCache();
   return toExpense(await response.json());
 }
 
@@ -213,6 +234,7 @@ export async function updateExpense(
     throw new Error("Failed to update expense");
   }
 
+  invalidateExpensesCache();
   return toExpense(await response.json());
 }
 
@@ -227,4 +249,6 @@ export async function deleteExpense(id: number): Promise<void> {
   if (!response.ok) {
     throw new Error("Failed to delete expense");
   }
+
+  invalidateExpensesCache();
 }
