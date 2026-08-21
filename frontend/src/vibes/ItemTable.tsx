@@ -17,12 +17,14 @@ interface ItemTableProps {
   columns: Column[];
   data: any[];
   emptyMessage?: string;
+  onRowClick?: (item: any) => void;
 }
 
 export function ItemTable({
   columns,
   data,
   emptyMessage = "No data available",
+  onRowClick,
 }: ItemTableProps) {
   const tableStyle: React.CSSProperties = {
     width: "100%",
@@ -85,7 +87,8 @@ export function ItemTable({
       </thead>
       <tbody>
         {data.map((item, index) => (
-          <tr key={index}>
+          <tr key={index} onClick={() => onRowClick?.(item)}
+            style={{ cursor: onRowClick ? "pointer" : "default" }}>
             {columns.map((column) => (
               <td
                 key={column.key}
