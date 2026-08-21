@@ -8,6 +8,7 @@ import { useCategories } from "../hooks/useCategories";
 import { TextField, SelectBox, Button } from "../vibes";
 import { useExpenseForm } from "../hooks/useExpenseForm";
 import { AddCategoryModal } from "./AddCategoryModal";
+import { getTodayDateString, getCurrentTimeString } from "../utils/expenseUtils";
 
 interface ExpenseFormProps {
   initialData?: Partial<ExpenseFormData>;
@@ -27,6 +28,9 @@ export function ExpenseForm({
       initialData,
       onSubmit,
     });
+
+  const today = getTodayDateString();
+  const isToday = formData.date === today;
 
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
 
@@ -104,6 +108,7 @@ export function ExpenseForm({
         value={formData.date}
         onChange={(e) => handleChange("date", e.target.value)}
         error={errors.date}
+        max={today}
         fullWidth
         required
       />
@@ -114,6 +119,7 @@ export function ExpenseForm({
         value={formData.time}
         onChange={(e) => handleChange("time", e.target.value)}
         error={errors.time}
+        max={isToday ? getCurrentTimeString() : undefined}
         fullWidth
         required
       />

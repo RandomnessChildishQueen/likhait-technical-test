@@ -26,6 +26,20 @@ export function formatCurrency(amount: number): string {
 }
 
 /**
+ * Get today's local date as a YYYY-MM-DD string, for date-input bounds/comparisons.
+ */
+export function getTodayDateString(): string {
+  return toDateTimeInput().split("T")[0];
+}
+
+/**
+ * Get the current local time as an HH:MM string, for time-input bounds.
+ */
+export function getCurrentTimeString(): string {
+  return toDateTimeInput().split("T")[1];
+}
+
+/**
  * Format the current local clock value for date and time form defaults.
  */
 export function toDateTimeInput(value: Date = new Date()): string {
