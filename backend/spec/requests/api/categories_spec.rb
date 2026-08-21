@@ -75,5 +75,27 @@ RSpec.describe "Api::Categories", type: :request do
       expect(JSON.parse(response.body)["errors"])
         .to include("Name is too long (maximum is 100 characters)")
     end
+
+    it "stores and returns the emoji" do
+      post "/api/categories", params: { category: { name: "Groceries", emoji: "🥑" } }
+
+      expect(response).to have_http_status(:created)
+      expect(JSON.parse(response.body)["emoji"]).to eq("🥑")
+      expect(Category.find_by(name: "Groceries").emoji).to eq("🥑")
+    end
+
+    it "creates a category without an emoji" do
+      post "/api/categories", params: { category: { name: "Groceries" } }
+
+      expect(response).to have_http_status(:created)
+      expect(JSON.parse(response.body)["emoji"]).to be_nil
+    end
+
+    it "rejects an invalid emoji" do
+      post "/api/categories", params: { category: { name: "Groceries", emoji: "nope" } }
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(JSON.parse(response.body)["errors"]).to include("Emoji must be a single character")
+    end
   end
 end

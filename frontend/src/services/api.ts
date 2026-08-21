@@ -57,6 +57,20 @@ export async function getExpenses(
   return data.map(toExpense);
 }
 
+type CategoriesListener = () => void;
+const categoriesListeners = new Set<CategoriesListener>();
+
+/**
+ * Re-run a callback whenever the cached category list is invalidated
+ */
+export function subscribeToCategories(listener: CategoriesListener): () => void {
+  categoriesListeners.add(listener);
+
+  return () => {
+    categoriesListeners.delete(listener);
+  };
+}
+
 /**
  * Store categories cache to improve category load time
  */
@@ -73,6 +87,7 @@ export function getCachedCategories(): Category[] | null {
 export function invalidateCategoriesCache(): void {
   categoriesCache = null;
   categoriesSnapshot = null;
+  categoriesListeners.forEach((listener) => listener());
 }
 
 /**
@@ -97,14 +112,16 @@ export async function fetchCategories(): Promise<Category[]> {
   return categoriesCache;
 }
 
-export async function createCategory(name: string): Promise<Category>
- {
+export async function createCategory(
+  name: string,
+  emoji?: string,
+): Promise<Category> {
   const response = await fetch(`${API_BASE_URL}/categories`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ category: { name } }),
+    body: JSON.stringify({ category: { name, emoji: emoji || null } }),
   });
   if (!response.ok) {
     const body = await response.json().catch(() => null);

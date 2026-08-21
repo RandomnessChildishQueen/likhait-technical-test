@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Category } from "../types";
-import { fetchCategories, getCachedCategories } from "../services/api";
+import { fetchCategories, getCachedCategories, subscribeToCategories } from "../services/api";
 
 export function useCategories() {
   const [categories, setCategories] = useState<Category[]>(
@@ -24,6 +24,7 @@ export function useCategories() {
 
   useEffect(() => {
     loadCategories();
+    return subscribeToCategories(loadCategories);
   }, [loadCategories]);
 
   return { categories, loading, reloadCategories: loadCategories };

@@ -3,8 +3,17 @@
  */
 
 import React, { useState } from "react";
+import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 import { createCategory } from "../services/api";
 import { Modal, TextField, Button } from "../vibes";
+import { COLORS } from "../constants/colors";
+
+const EMOJI_SUGGESTIONS = [
+  "🍔", "🚗", "🎬", "🛍️", "📄", "🏥",
+  "📚", "✈️", "🏠", "💰", "🎁", "🐾",
+  "☕", "💡", "📱", "🤖", "🎯", "🎰",
+  "🌴", "🚊", "📦",
+];
 
 interface AddCategoryModalProps {
   isOpen: boolean;
@@ -13,12 +22,16 @@ interface AddCategoryModalProps {
 
 export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
   const [name, setName] = useState("");
+  const [emoji, setEmoji] = useState("");
   const [error, setError] = useState<string | undefined>();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   const closeAndReset = () => {
     setName("");
+    setEmoji("");
     setError(undefined);
+    setIsPickerOpen(false);
     onClose();
   };
 
@@ -32,7 +45,10 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
 
     setIsSubmitting(true);
     try {
-      await createCategory(name.trim());
+      await createCategory(
+        name.trim(),
+        emoji.trim() || undefined
+      );
       closeAndReset();
     } catch (err) {
       setError(
@@ -55,6 +71,29 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
     marginTop: "0.5rem",
   };
 
+  const labelStyle: React.CSSProperties = {
+     fontSize: "0.875rem",
+     fontWeight: 600,
+     color: COLORS.text.primary,
+   };
+
+   const suggestionGridStyle: React.CSSProperties = {
+     display: "flex",
+     flexWrap: "wrap",
+     gap: "0.375rem",
+   };
+
+   const suggestionStyle = (isSelected: boolean): React.CSSProperties => ({
+     fontSize: "1.25rem",
+     lineHeight: 1,
+     padding: "0.375rem",
+     cursor: "pointer",
+     borderRadius: "0.375rem",
+     background: isSelected ? COLORS.secondary.s03 : "transparent",
+     border: `1px solid ${isSelected ? COLORS.primary.p06 : COLORS.border}`,
+   });
+
+
   return (
     <Modal isOpen={isOpen} onClose={closeAndReset} title="Add New Category">
       <form onSubmit={handleSubmit} style={formStyle}>
@@ -70,6 +109,60 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
           error={error}
           maxLength={100}
           autoFocus
+          fullWidth
+        />
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          <label style={labelStyle}>Icon (optional)</label>
+          <div style={suggestionGridStyle}>
+            {EMOJI_SUGGESTIONS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                aria-label={`Use ${option} as the icon`}
+                aria-pressed={emoji === option}
+                style={suggestionStyle(emoji === option)}
+                onClick={() => {
+                  setEmoji(emoji === option ? "" : option);
+                  setError(undefined);
+                }}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsPickerOpen((open) => !open)}
+            >
+              {isPickerOpen ? "Close picker" : "Choose from all emojis"}
+            </Button>
+
+            {isPickerOpen && (
+              <EmojiPicker
+                onEmojiClick={(emojiData: EmojiClickData) => {
+                  setEmoji(emojiData.emoji);
+                  setError(undefined);
+                  setIsPickerOpen(false);
+                }}
+                width="100%"
+                height={350}
+              />
+            )}
+          </div>
+        </div>
+
+        <TextField
+          label="Or paste your own"
+          type="text"
+          placeholder="📦"
+          value={emoji}
+          onChange={(e) => {
+            setEmoji(e.target.value);
+            setError(undefined);
+          }}
           fullWidth
         />
 
