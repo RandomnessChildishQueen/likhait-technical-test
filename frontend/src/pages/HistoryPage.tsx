@@ -1,48 +1,61 @@
 import React, { useState, useEffect } from "react";
 import { getExpenses, createExpense } from "../services/api";
+import { useCategories } from "../hooks/useCategories";
+import { useCategoryEmoji } from "../hooks/useCategoryEmoji";
 import { Expense, ExpenseFormData } from "../types";
 import YearNavigation from "../components/YearNavigation";
 import { MonthNavigation } from "../components/MonthNavigation";
 import CategoryBreakdown from "../components/CategoryBreakdown";
 import { CalendarExpenseTable } from "../components/CalendarExpenseTable";
 import { ExpenseForm } from "../components/ExpenseForm";
-import { Modal, Button } from "../vibes";
+import { Modal, Button, SelectBox } from "../vibes";
 import { COLORS } from "../constants/colors";
 
 const HistoryPage: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { categories } = useCategories();
+  const categoryEmoji = useCategoryEmoji();
 
-  // Get year and month from URL params, default to current date if not provided
-  const getInitialYearMonth = () => {
+
+  // Get year, month, and category from URL params, default to current date if not provided
+  const getInitialFilters = () => {
     const params = new URLSearchParams(window.location.search);
     const currentDate = new Date();
     const yearParam = params.get("year");
     const monthParam = params.get("month");
+    const categoryParam = params.get("category");
 
     return {
       year: yearParam ? parseInt(yearParam) : currentDate.getFullYear(),
       month: monthParam ? parseInt(monthParam) : currentDate.getMonth() + 1,
+      categoryId: categoryParam ? Number(categoryParam) : undefined,
     };
   };
 
-  const initial = getInitialYearMonth();
+  const initial = getInitialFilters();
   const [selectedYear, setSelectedYear] = useState(initial.year);
   const [selectedMonth, setSelectedMonth] = useState(initial.month);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(
+    initial.categoryId,
+  );
 
-  // Update URL when year or month changes
-  const updateURL = (year: number, month: number) => {
+  // Update URL when year, month, or category changes
+  const updateURL = (year: number, month: number, categoryId?: number) => {
     const params = new URLSearchParams();
     params.set("year", year.toString());
     params.set("month", month.toString());
+    if (categoryId) {
+      params.set("category", categoryId.toString());
+    }
     const newURL = `${window.location.pathname}?${params.toString()}`;
     window.history.pushState({}, "", newURL);
   };
 
   // Initialize URL params if not present
   useEffect(() => {
-    updateURL(selectedYear, selectedMonth);
+    updateURL(selectedYear, selectedMonth, selectedCategoryId);
   }, []);
 
   useEffect(() => {
@@ -63,13 +76,19 @@ const HistoryPage: React.FC = () => {
 
   const handleYearChange = (year: number) => {
     setSelectedYear(year);
-    updateURL(year, selectedMonth);
+    updateURL(year, selectedMonth, selectedCategoryId);
   };
 
   const handleMonthChange = (month: number) => {
     setSelectedMonth(month);
-    updateURL(selectedYear, month);
+    updateURL(selectedYear, month, selectedCategoryId);
   };
+
+  const handleCategoryFilterChange = (value: string) => {
+      const categoryId = value ? Number(value) : undefined;
+      setSelectedCategoryId(categoryId);
+      updateURL(selectedYear, selectedMonth, categoryId);
+    };
 
   const handleAddExpense = async (data: ExpenseFormData) => {
     try {
@@ -82,8 +101,16 @@ const HistoryPage: React.FC = () => {
     }
   };
 
+  const selectedCategoryName = categories.find(
+    (category) => category.id === selectedCategoryId,
+  )?.name;
+
+  const visibleExpenses = selectedCategoryName
+    ? expenses.filter((expense) => expense.category === selectedCategoryName)
+    : expenses;
+
   // Calculate category breakdown
-  const categoryData = expenses.reduce(
+  const categoryData = visibleExpenses.reduce(
     (acc, expense) => {
       const category = expense.category || "Uncategorized";
       if (!acc[category]) {
@@ -96,11 +123,11 @@ const HistoryPage: React.FC = () => {
     {} as Record<string, { category: string; amount: number; count: number }>,
   );
 
-  const categories = Object.values(categoryData).sort(
+  const categoryBreakdown = Object.values(categoryData).sort(
     (a, b) => b.amount - a.amount,
   );
-  const total = categories.reduce((sum, cat) => sum + cat.amount, 0);
-  const totalCount = categories.reduce((sum, cat) => sum + cat.count, 0);
+  const total = categoryBreakdown.reduce((sum, cat) => sum + cat.amount, 0);
+  const totalCount = categoryBreakdown.reduce((sum, cat) => sum + cat.count, 0);
 
   const pageStyle: React.CSSProperties = {
     padding: "48px 64px",
@@ -148,9 +175,19 @@ const HistoryPage: React.FC = () => {
             onYearChange={handleYearChange}
           />
         </div>
-        <Button variant="primary" onClick={() => setIsModalOpen(true)}>
-          Add Expense
-        </Button>
+        <div style={{ display: "flex", gap: "12px" }}>
+          <SelectBox
+            value={selectedCategoryId?.toString() ?? ""}
+            onChange={(e) => handleCategoryFilterChange(e.target.value)}
+            options={categories.map((category) => ({
+              value: category.id.toString(),
+              label: `${categoryEmoji(category.name)} ${category.name}`,
+            }))}
+          />
+          <Button variant="primary" onClick={() => setIsModalOpen(true)}>
+            Add Expense
+          </Button>
+        </div>
       </div>
 
       <MonthNavigation
@@ -165,13 +202,13 @@ const HistoryPage: React.FC = () => {
         ) : (
           <>
             <CategoryBreakdown
-              categories={categories}
+              categories={categoryBreakdown}
               total={total}
               totalCount={totalCount}
             />
             <div style={{ marginTop: "32px" }}>
               <CalendarExpenseTable
-                expenses={expenses}
+                expenses={visibleExpenses}
                 onExpenseUpdated={fetchExpenses}
               />
             </div>

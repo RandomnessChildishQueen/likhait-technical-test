@@ -2,7 +2,7 @@
  * API service for communicating with the backend
  */
 
-import { Expense, ExpenseFormData } from "../types";
+import { Category, Expense, ExpenseFormData } from "../types";
 
 const API_BASE_URL = "http://localhost:3000/api";
 
@@ -57,17 +57,111 @@ export async function getExpenses(
   return data.map(toExpense);
 }
 
+type CategoriesListener = () => void;
+const categoriesListeners = new Set<CategoriesListener>();
+
+/**
+ * Re-run a callback whenever the cached category list is invalidated
+ */
+export function subscribeToCategories(listener: CategoriesListener): () => void {
+  categoriesListeners.add(listener);
+
+  return () => {
+    categoriesListeners.delete(listener);
+  };
+}
+
+/**
+ * Store categories cache to improve category load time
+ */
+let categoriesCache: Promise<Category[]> | null = null;
+let categoriesSnapshot: Category[] | null = null;
+
+/**
+ * Synchronously read the categories, if they have already loaded
+ */
+export function getCachedCategories(): Category[] | null {
+  return categoriesSnapshot;
+}
+
+export function invalidateCategoriesCache(): void {
+  categoriesCache = null;
+  categoriesSnapshot = null;
+  categoriesListeners.forEach((listener) => listener());
+}
+
 /**
  * Fetch all categories
  */
-export async function fetchCategories(): Promise<
-  Array<{ id: number; name: string }>
-> {
-  const response = await fetch(`${API_BASE_URL}/categories`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch categories");
+export async function fetchCategories(): Promise<Category[]> {
+  if (!categoriesCache) {
+    categoriesCache = (async () => {
+      const response = await fetch(`${API_BASE_URL}/categories`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch categories");
+      }
+      const categories: Category[] = await response.json();
+      categoriesSnapshot = categories;
+      return categories;
+    })();
+
+    // Never cache a failure — let the next caller retry.
+    categoriesCache.catch(() => invalidateCategoriesCache());
   }
-  return response.json();
+
+  return categoriesCache;
+}
+
+export async function createCategory(
+  name: string,
+  emoji?: string,
+): Promise<Category> {
+  const response = await fetch(`${API_BASE_URL}/categories`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ category: { name, emoji: emoji || null } }),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.errors?.[0] ?? "Failed to create category");
+  }
+  const category: Category = await response.json();
+  invalidateCategoriesCache();
+  return category
+}
+
+export async function updateCategory(
+  id: number,
+  name: string,
+  emoji?: string,
+): Promise<Category> {
+  const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ category: { name, emoji: emoji || null } }),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.errors?.[0] ?? "Failed to update category");
+  }
+  const category: Category = await response.json();
+  invalidateCategoriesCache();
+  return category;
+}
+
+export async function deleteCategory(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.errors?.[0] ?? "Failed to delete category");
+  }
+  invalidateCategoriesCache();
 }
 
 async function buildExpensePayload(data: ExpenseFormData) {
