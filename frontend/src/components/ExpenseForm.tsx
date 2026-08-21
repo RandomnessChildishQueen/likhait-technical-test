@@ -2,11 +2,12 @@
  * Form component for adding/editing expenses
  */
 
-import React from "react";
+import React, { useState } from "react";
 import { ExpenseFormData } from "../types";
 import { useCategories } from "../hooks/useCategories";
 import { TextField, SelectBox, Button } from "../vibes";
 import { useExpenseForm } from "../hooks/useExpenseForm";
+import { AddCategoryModal } from "./AddCategoryModal";
 
 interface ExpenseFormProps {
   initialData?: Partial<ExpenseFormData>;
@@ -27,6 +28,8 @@ export function ExpenseForm({
       onSubmit,
     });
 
+  const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
+
   const formStyle: React.CSSProperties = {
     display: "flex",
     flexDirection: "column",
@@ -37,6 +40,12 @@ export function ExpenseForm({
     display: "flex",
     gap: "0.5rem",
     marginTop: "0.5rem",
+  };
+
+  const categoryRowStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "flex-end",
+    gap: "0.5rem",
   };
 
   const { categories } = useCategories();
@@ -72,15 +81,22 @@ export function ExpenseForm({
         required
       />
 
-      <SelectBox
-        label="Category"
-        options={categoryOptions}
-        value={formData.category}
-        onChange={(e) => handleChange("category", e.target.value)}
-        error={errors.category}
-        fullWidth
-        required
-      />
+      <div style={categoryRowStyle}>
+        <SelectBox
+          label="Category"
+          options={categoryOptions}
+          value={formData.category}
+          onChange={(e) => handleChange("category", e.target.value)}
+          error={errors.category}
+          fullWidth
+          required
+        />
+
+        <Button type="button" variant="secondary"
+          onClick={() => setIsAddCategoryOpen(true)}>
+            + New
+        </Button>
+      </div>
 
       <TextField
         label="Date"
@@ -122,6 +138,12 @@ export function ExpenseForm({
           </Button>
         )}
       </div>
+
+      <AddCategoryModal
+        isOpen={isAddCategoryOpen}
+        onClose={() => setIsAddCategoryOpen(false)}
+        onSaved={(category) => handleChange("category", category.name)}
+      />
     </form>
   );
 }

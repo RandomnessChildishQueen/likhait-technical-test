@@ -3,6 +3,7 @@
  */
 
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { COLORS } from "../constants/colors";
 
 interface ModalProps {
@@ -87,7 +88,7 @@ export function Modal({
     lineHeight: 1,
   };
 
-  return (
+  return createPortal(
     <div style={overlayStyle} onClick={onClose}>
       <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
         {title && (
@@ -100,6 +101,7 @@ export function Modal({
         )}
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

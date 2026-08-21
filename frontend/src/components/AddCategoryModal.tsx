@@ -20,9 +20,10 @@ interface AddCategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   category?: Category;
+  onSaved?: (category: Category) => void;
 }
 
-export function AddCategoryModal({ isOpen, onClose, category }: AddCategoryModalProps) {
+export function AddCategoryModal({ isOpen, onClose, category, onSaved }: AddCategoryModalProps) {
   const isEditing = Boolean(category);
   const [name, setName] = useState("");
   const [emoji, setEmoji] = useState("");
@@ -47,6 +48,7 @@ export function AddCategoryModal({ isOpen, onClose, category }: AddCategoryModal
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
 
     if (!name.trim()) {
       setError("Category name is required");
@@ -55,18 +57,16 @@ export function AddCategoryModal({ isOpen, onClose, category }: AddCategoryModal
 
     setIsSubmitting(true);
     try {
-      if (isEditing && category) {
+      const saved = isEditing && category ?
         await updateCategory(
           category.id,
           name.trim(),
           emoji.trim() || undefined
-        );
-      } else {
-        await createCategory(
+        ) : await createCategory(
           name.trim(),
           emoji.trim() || undefined
         );
-      }
+      onSaved?.(saved);
       closeAndReset();
     } catch (err) {
       setError(

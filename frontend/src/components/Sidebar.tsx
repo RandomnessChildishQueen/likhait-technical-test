@@ -190,9 +190,10 @@ const Sidebar: React.FC<SidebarProps> = ({
             stroke="currentColor"
             strokeWidth="2"
           >
-            <line x1="6" y1="20" x2="6" y2="12" />
-            <line x1="12" y1="20" x2="12" y2="4" />
-            <line x1="18" y1="20" x2="18" y2="9" />
+            <rect x="3" y="3" width="8" height="8" rx="1" />
+            <rect x="13" y="3" width="8" height="8" rx="1" />
+            <rect x="3" y="13" width="8" height="8" rx="1" />
+            <rect x="13" y="13" width="8" height="8" rx="1" />
           </svg>
           <span style={navTextStyle}>Categories</span>
         </button>
