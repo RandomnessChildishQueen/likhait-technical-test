@@ -47,7 +47,7 @@ export function CalendarExpenseTable({
   const confirmDelete = async () => {
     if (!deletingExpense) return;
     try {
-      await deleteExpense(deletingExpense.id);
+      await deleteExpense(deletingExpense.id, deletingExpense.occurredAt);
       setIsDeleteModalOpen(false);
       setDeletingExpense(null);
       onExpenseUpdated();
@@ -60,7 +60,7 @@ export function CalendarExpenseTable({
   const handleUpdate = async (data: ExpenseFormData) => {
     if (!editingExpense) return;
     try {
-      await updateExpense(editingExpense.id, data);
+      await updateExpense(editingExpense.id, data, editingExpense.occurredAt);
       setIsEditModalOpen(false);
       setEditingExpense(null);
       onExpenseUpdated();
