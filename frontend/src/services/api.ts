@@ -132,6 +132,38 @@ export async function createCategory(
   return category
 }
 
+export async function updateCategory(
+  id: number,
+  name: string,
+  emoji?: string,
+): Promise<Category> {
+  const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ category: { name, emoji: emoji || null } }),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.errors?.[0] ?? "Failed to update category");
+  }
+  const category: Category = await response.json();
+  invalidateCategoriesCache();
+  return category;
+}
+
+export async function deleteCategory(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.errors?.[0] ?? "Failed to delete category");
+  }
+  invalidateCategoriesCache();
+}
+
 async function buildExpensePayload(data: ExpenseFormData) {
   const categories = await fetchCategories();
   const category = categories.find((item) => item.name === data.category);

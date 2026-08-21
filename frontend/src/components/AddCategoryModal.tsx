@@ -2,11 +2,12 @@
  * Modal dialog for creating a new expense category
  */
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
-import { createCategory } from "../services/api";
+import { createCategory, updateCategory } from "../services/api";
 import { Modal, TextField, Button } from "../vibes";
 import { COLORS } from "../constants/colors";
+import { Category } from "../types";
 
 const EMOJI_SUGGESTIONS = [
   "🍔", "🚗", "🎬", "🛍️", "📄", "🏥",
@@ -18,14 +19,23 @@ const EMOJI_SUGGESTIONS = [
 interface AddCategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
+  category?: Category;
 }
 
-export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
+export function AddCategoryModal({ isOpen, onClose, category }: AddCategoryModalProps) {
+  const isEditing = Boolean(category);
   const [name, setName] = useState("");
   const [emoji, setEmoji] = useState("");
   const [error, setError] = useState<string | undefined>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+
+  useEffect(() => {
+    setName(category?.name ?? "");
+    setEmoji(category?.emoji ?? "");
+    setError(undefined);
+    setIsPickerOpen(false);
+  }, [category, isOpen]);
 
   const closeAndReset = () => {
     setName("");
@@ -45,10 +55,18 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
 
     setIsSubmitting(true);
     try {
-      await createCategory(
-        name.trim(),
-        emoji.trim() || undefined
-      );
+      if (isEditing && category) {
+        await updateCategory(
+          category.id,
+          name.trim(),
+          emoji.trim() || undefined
+        );
+      } else {
+        await createCategory(
+          name.trim(),
+          emoji.trim() || undefined
+        );
+      }
       closeAndReset();
     } catch (err) {
       setError(
@@ -95,7 +113,8 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
 
 
   return (
-    <Modal isOpen={isOpen} onClose={closeAndReset} title="Add New Category">
+    <Modal isOpen={isOpen} onClose={closeAndReset}
+      title={isEditing ? "Edit Category" : "Add New Category"}>
       <form onSubmit={handleSubmit} style={formStyle}>
         <TextField
           label="Category Name"
@@ -173,7 +192,8 @@ export function AddCategoryModal({ isOpen, onClose }: AddCategoryModalProps) {
             disabled={isSubmitting}
             fullWidth
           >
-            {isSubmitting ? "Saving..." : "Add Category"}
+            {isSubmitting ? "Saving..." : isEditing ?
+              "Save Changes" : "Add Category"}
           </Button>
           <Button
             type="button"
