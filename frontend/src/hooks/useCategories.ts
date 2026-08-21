@@ -4,11 +4,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Category } from "../types";
-import { fetchCategories } from "../services/api";
+import { fetchCategories, getCachedCategories } from "../services/api";
 
 export function useCategories() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<Category[]>(
+    () => getCachedCategories() ?? []);
+  const [loading, setLoading] = useState(() => getCachedCategories() === null);
 
   const loadCategories = useCallback(async () => {
     try {

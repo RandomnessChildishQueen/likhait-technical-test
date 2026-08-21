@@ -58,15 +58,43 @@ export async function getExpenses(
 }
 
 /**
+ * Store categories cache to improve category load time
+ */
+let categoriesCache: Promise<Category[]> | null = null;
+let categoriesSnapshot: Category[] | null = null;
+
+/**
+ * Synchronously read the categories, if they have already loaded
+ */
+export function getCachedCategories(): Category[] | null {
+  return categoriesSnapshot;
+}
+
+export function invalidateCategoriesCache(): void {
+  categoriesCache = null;
+  categoriesSnapshot = null;
+}
+
+/**
  * Fetch all categories
  */
-export async function fetchCategories(): Promise<Category[]>
- {
-  const response = await fetch(`${API_BASE_URL}/categories`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch categories");
+export async function fetchCategories(): Promise<Category[]> {
+  if (!categoriesCache) {
+    categoriesCache = (async () => {
+      const response = await fetch(`${API_BASE_URL}/categories`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch categories");
+      }
+      const categories: Category[] = await response.json();
+      categoriesSnapshot = categories;
+      return categories;
+    })();
+
+    // Never cache a failure — let the next caller retry.
+    categoriesCache.catch(() => invalidateCategoriesCache());
   }
-  return response.json();
+
+  return categoriesCache;
 }
 
 export async function createCategory(name: string): Promise<Category>
@@ -82,7 +110,9 @@ export async function createCategory(name: string): Promise<Category>
     const body = await response.json().catch(() => null);
     throw new Error(body?.errors?.[0] ?? "Failed to create category");
   }
-  return response.json();
+  const category: Category = await response.json();
+  invalidateCategoriesCache();
+  return category
 }
 
 async function buildExpensePayload(data: ExpenseFormData) {

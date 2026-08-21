@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { fetchCategories } from "./services/api";
 import Sidebar from "./components/Sidebar";
 import HistoryPage from "./pages/HistoryPage";
 import { COLORS } from "./constants/colors";
@@ -22,6 +23,13 @@ function App() {
   const handleToggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
+
+  //useEffect for preloading categories on the get go
+  useEffect(() => {
+      fetchCategories().catch(() => {
+        // useCategories surfaces the failure when a form actually needs the list.
+      });
+    }, []);
 
   return (
     <div style={appStyle}>
